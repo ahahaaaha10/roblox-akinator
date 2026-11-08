@@ -1,0 +1,78 @@
+{
+  "name": "silent-akinator-pro",
+  "version": "4.0.3",
+  "description": "Working Akinator API for Node.js (2025/2026). Fast, lightweight, Cloudflare-safe akinator client / wrapper / SDK / bot library \u2014 supports 22 regions, child mode, undo, win, exclude. The genie / 20-questions / character-guessing API that actually works after the api-en4 shutdown. Drop-in replacement for aki-api and akinator-api.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "type": "commonjs",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "akinator",
+    "akinator-api",
+    "akinator-bot",
+    "akinator-client",
+    "akinator-sdk",
+    "akinator-wrapper",
+    "akinator-node",
+    "akinator-js",
+    "akinator-2025",
+    "akinator-2026",
+    "working-akinator",
+    "akinator-fix",
+    "akinator-cloudflare",
+    "cloudflare-bypass",
+    "akinator-403",
+    "aki-api",
+    "aki",
+    "genie",
+    "20-questions",
+    "twenty-questions",
+    "guessing-game",
+    "character-guess",
+    "ai-guess",
+    "game",
+    "ai-game",
+    "quiz",
+    "trivia",
+    "fun-api",
+    "discord-bot",
+    "discord-akinator",
+    "telegram-bot",
+    "whatsapp-bot",
+    "baileys",
+    "chatbot",
+    "scraper",
+    "typescript",
+    "esm",
+    "cjs",
+    "silent",
+    "silent-tech",
+    "silent-akinator",
+    "silent-akinator-pro"
+  ],
+  "author": "Silent Tech <silent.tech.offc@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/silent-tech/silent-akinator-pro.git"
+  },
+  "homepage": "https://github.com/silent-tech/silent-akinator-pro#readme",
+  "bugs": {
+    "url": "https://github.com/silent-tech/silent-akinator-pro/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "undici": "^6.19.8",
+    "cheerio": "^1.0.0"
+  }
+}
