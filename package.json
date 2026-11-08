@@ -1,4 +1,3 @@
-
 {
   "name": "roblox-akinator",
   "version": "1.0.0",
@@ -7,6 +6,6 @@
   },
   "dependencies": {
     "express": "^4.21.2",
-    "silent-akinator-pro": "4.0.3"
+    "silent-akinator-pro": "file:./silent-akinator-pro"
   }
 }
