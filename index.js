@@ -17,30 +17,29 @@ function inspectHTML(html) {
       .slice(0, 120) || "No title found";
 
   const excerpt = html
-    .slice(0, 800)
+    .slice(0, 5000)
     .replace(
       /(session|signature)(["'\s:=]+)[^"'&\s<>]*/gi,
       "$1$2[REDACTED]"
-    )
-    .replace(
-      /(value=["'])[^"']*/gi,
-      "$1[REDACTED]"
     )
     .replace(
       /(set-cookie:?\s*)[^\r\n<]*/gi,
       "$1[REDACTED]"
     );
 
-  return { title, excerpt };
+  return {
+    title,
+    excerpt,
+    hasSession: /session/i.test(html),
+    hasSignature: /signature/i.test(html),
+    hasSid: /\bsid\b/i.test(html)
+  };
 }
 
 app.post("/diagnose", async (req, res) => {
   try {
     const { gotScraping } = await import("got-scraping");
-
     const base = "https://en.akinator.com";
-
-    console.log("DIAGNOSTIC: requesting homepage");
 
     const homepage = await gotScraping(base + "/", {
       responseType: "text",
@@ -51,8 +50,6 @@ app.post("/diagnose", async (req, res) => {
     const cookieHeader = cookies
       .map(c => c.split(";")[0])
       .join("; ");
-
-    console.log("DIAGNOSTIC: requesting game");
 
     const game = await gotScraping(base + "/game", {
       method: "POST",
@@ -83,16 +80,16 @@ app.post("/diagnose", async (req, res) => {
         contentType: game.headers["content-type"],
         finalUrl: game.url,
         title: info.title,
+        hasSession: info.hasSession,
+        hasSignature: info.hasSignature,
+        hasSid: info.hasSid,
         excerpt: info.excerpt
       }
     });
 
   } catch (error) {
     console.error("DIAGNOSTIC ERROR:", error.message);
-
-    res.status(500).json({
-      error: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -114,10 +111,7 @@ app.post("/start", async (req, res) => {
 
   } catch (error) {
     console.error("AKI ERROR:", error.stack || error.message);
-
-    res.status(500).json({
-      error: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
