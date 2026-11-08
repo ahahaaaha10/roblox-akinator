@@ -1,117 +1,34 @@
 
 const express = require("express");
-const {
-  AkinatorClient,
-  Languages,
-  Themes
-} = require("akinator-client");
+const Akinator = require("silent-akinator-pro");
 
 const app = express();
 app.use(express.json());
 
-const BASE = "https://en.akinator.com";
-
-function inspectHTML(html) {
-  const sessionRegex =
-    /name="session" id="session" value="([^"]+)"/;
-
-  const signatureRegex =
-    /name="signature" id="signature" value="([^"]+)"/;
-
-  const inputTags = (html.match(/<input\b[^>]*>/gi) || [])
-    .filter(tag => /name=["'](session|signature)["']/i.test(tag))
-    .map(tag =>
-      tag.replace(
-        /value=(["']).*?\1/i,
-        'value="[REDACTED]"'
-      )
-    );
-
-  return {
-    exactSessionMatch: sessionRegex.test(html),
-    exactSignatureMatch: signatureRegex.test(html),
-    sessionAnywhere: /name=["']session["']/i.test(html),
-    signatureAnywhere: /name=["']signature["']/i.test(html),
-    inputTags
-  };
-}
-
-app.post("/diagnose", async (req, res) => {
-  try {
-    const { gotScraping } = await import("got-scraping");
-
-    const headers = {
-      "user-agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-    };
-
-    const homepage = await gotScraping({
-      url: BASE + "/",
-      responseType: "text",
-      throwHttpErrors: false,
-      headers,
-      context: { useHeaderGenerator: false }
-    });
-
-    const cookies = homepage.headers["set-cookie"] || [];
-    const cookieHeader = cookies
-      .map(cookie => cookie.split(";")[0])
-      .join("; ");
-
-    const form = new URLSearchParams();
-    form.append("sid", "1");
-    form.append("cm", "true");
-
-    const game = await gotScraping({
-      url: BASE + "/game",
-      method: "POST",
-      body: form.toString(),
-      responseType: "text",
-      throwHttpErrors: false,
-      headers: {
-        ...headers,
-        "content-type": "application/x-www-form-urlencoded",
-        ...(cookieHeader ? { cookie: cookieHeader } : {})
-      },
-      context: { useHeaderGenerator: false }
-    });
-
-    const info = inspectHTML(game.body);
-
-    res.json({
-      homepageStatus: homepage.statusCode,
-      gameStatus: game.statusCode,
-      finalUrl: game.url,
-      contentType: game.headers["content-type"],
-      ...info
-    });
-
-  } catch (error) {
-    console.error("DIAGNOSTIC ERROR:", error.stack || error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
+const games = new Map();
+let nextId = 1;
 
 app.post("/start", async (req, res) => {
   try {
-    const aki = new AkinatorClient({
-      language: Languages.English,
-      theme: Themes.Character,
-      childMode: true,
-      retries: 1
+    const aki = new Akinator({
+      region: "en",
+      childMode: true
     });
 
-    const result = await aki.start();
+    await aki.start();
+
+    const id = String(nextId++);
+    games.set(id, aki);
 
     res.json({
       success: true,
-      question: result.question,
-      answers: result.answers
+      gameId: id,
+      question: aki.question,
+      step: aki.step,
+      progression: aki.progression
     });
-
   } catch (error) {
-    console.error("AKI ERROR:", error.stack || error.message);
-
+    console.error("START ERROR:", error.stack || error.message);
     res.status(500).json({
       success: false,
       error: error.message
@@ -119,10 +36,99 @@ app.post("/start", async (req, res) => {
   }
 });
 
+app.post("/answer", async (req, res) => {
+  try {
+    const { gameId, answer } = req.body;
+    const aki = games.get(String(gameId));
+
+    if (!aki) {
+      return res.status(404).json({
+        success: false,
+        error: "Game not found"
+      });
+    }
+
+    const valid = ["y", "n", "idk", "p", "pn"];
+
+    if (!valid.includes(answer)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid answer"
+      });
+    }
+
+    const result = await aki.answer(answer);
+
+    res.json({
+      success: true,
+      question: aki.question,
+      step: aki.step,
+      progression: aki.progression,
+      guessed: aki.guessed,
+      guess: aki.guessed ? aki.guess : null,
+      result
+    });
+  } catch (error) {
+    console.error("ANSWER ERROR:", error.stack || error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.post("/exclude", async (req, res) => {
+  try {
+    const aki = games.get(String(req.body.gameId));
+
+    if (!aki) {
+      return res.status(404).json({
+        success: false,
+        error: "Game not found"
+      });
+    }
+
+    await aki.exclude();
+
+    res.json({
+      success: true,
+      question: aki.question,
+      step: aki.step
+    });
+  } catch (error) {
+    console.error("EXCLUDE ERROR:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/back", async (req, res) => {
+  try {
+    const aki = games.get(String(req.body.gameId));
+
+    if (!aki) {
+      return res.status(404).json({
+        success: false,
+        error: "Game not found"
+      });
+    }
+
+    await aki.back();
+
+    res.json({
+      success: true,
+      question: aki.question,
+      step: aki.step
+    });
+  } catch (error) {
+    console.error("BACK ERROR:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get("/", (req, res) => {
-  res.send("Akinator backend online");
+  res.send("Silent Akinator backend online");
 });
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log("Akinator backend started");
+  console.log("Akinator backend running");
 });
